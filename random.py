@@ -55,6 +55,7 @@ def amgm(expr):
         return rtn
 
     def amgm_expr(expr, label):
+        # print(expr,label)
 
         def f(term):
             if term.is_positive:
@@ -67,7 +68,7 @@ def amgm(expr):
         t = type(expr)
 
         prod = sp.fraction(expr)
-        if prod[0] != 1 and prod[1] != 1:
+        if prod[1] != 1:
             denom = amgm_expr(prod[0], label)
             numer = amgm_expr(prod[1], -label)
             return [x / y for x in denom for y in numer]
@@ -88,7 +89,7 @@ def amgm(expr):
             children_expr = dict()
             for i in range(n):
                 child = children[i]
-                children_expr[i] = amgm_expr(child, f(child) * label)
+                children_expr[i] = amgm_expr(child, abs(f(child)) * label)
             for i in range(n):
                 m = len(children_expr[i])
                 for j in range(m - 1):
@@ -122,10 +123,7 @@ def amgm(expr):
             left_pos_neg[n] = 1
             right_pos_neg[-1] = 1
             right_pos_neg[n] = 1
-            all_pos = True
-            for i in range(n):
-                left_pos_neg[i] = left_pos_neg[i - 1] * f(children[i])
-                if f(children[i]) != 1: all_pos = False
+            for i in range(n):left_pos_neg[i] = left_pos_neg[i - 1] * f(children[i])
             for i in range(n - 1, -1, -1): right_pos_neg[i] = right_pos_neg[i + 1] * f(children[i])
             children_expr = dict()
             for i in range(n):
@@ -140,8 +138,12 @@ def amgm(expr):
                         if k == i: continue
                         new_expr *= children_expr[k][-1]
                     rtn.append(new_expr)
-            if all_pos and label == -1:
+            pos_terms = [x for x in expr.args if f(x)==1]
+            neg_terms = [x for x in expr.args if f(x)==-1]
+            if expr.is_positive and label == -1:
                 rtn += am_to_from_gm(expr.args, sp.Mul)
+            if expr.is_negative and label == 1:
+                rtn += [sp.Mul(*(neg_terms + [x])) for x in am_to_from_gm(pos_terms, sp.Mul)]
 
             return rtn + [expr]
 
@@ -151,8 +153,7 @@ def amgm(expr):
     label=1
     if t==sp.Lt or t==sp.Le: label=1
     elif t==sp.Ge or t==sp.Gt: label=-1
-    else:
-        return [expr]
+    else: return [expr]
 
     left = expr.args[0]
     right = expr.args[1]
@@ -172,7 +173,7 @@ def amgm(expr):
 
 # Define symbolic variables
 x, y, z, w = sp.symbols('x y z w', positive=True)
-expr = x+y< 2*(x*y)**(sp.Rational(1,2))
+expr = 1-sp.sqrt(2)*z*x - 1/(x+y) < 1/(x+y+1/(x*y))
 
 for x in amgm(expr): print(x)
 
