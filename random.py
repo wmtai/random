@@ -58,29 +58,13 @@ def amgm(expr):
         # print(expr,label)
 
         def f(term):
-            if term.is_positive:
-                return 1
-            elif term.is_negative:
-                return -1
+            if term.is_positive: return 1
+            elif term.is_negative: return -1
             return 0
 
-        if label == 0: return [expr]
+        if label == 0: return []
         t = type(expr)
 
-        prod = sp.fraction(expr)
-        if prod[1] != 1:
-            denom = amgm_expr(prod[0], label)
-            numer = amgm_expr(prod[1], -label)
-            return [x / y for x in denom for y in numer]
-
-        if t == sp.Pow:
-            power = expr.args[1]
-            new_expr = expr.args[0]
-            if power.is_positive:
-                return [sp.Pow(x, power) for x in amgm_expr(new_expr, label)]
-            elif power.is_negative:
-                return [sp.Pow(x, power) for x in amgm_expr(new_expr, -label)]
-            return [expr]
 
         if t == sp.Add:
             rtn = []
@@ -89,14 +73,14 @@ def amgm(expr):
             children_expr = dict()
             for i in range(n):
                 child = children[i]
-                children_expr[i] = amgm_expr(child, abs(f(child)) * label)
+                children_expr[i] = amgm_expr(child, label)
             for i in range(n):
                 m = len(children_expr[i])
-                for j in range(m - 1):
+                for j in range(m):
                     new_expr = children_expr[i][j]
                     for k in range(n):
                         if k == i: continue
-                        new_expr += children_expr[k][-1]
+                        new_expr += children[k]
                     rtn.append(new_expr)
             to_apply = []
             not_to_apply = []
@@ -110,7 +94,28 @@ def amgm(expr):
             for x in gm:
                 temp = label * x
                 rtn.append(sp.Add(*(not_to_apply + [temp])))
-            return rtn + [expr]
+
+            # print(expr, rtn)
+            return rtn
+
+
+        if t == sp.Pow:
+            power = expr.args[1]
+            new_expr = expr.args[0]
+            if power.is_positive:
+                return [sp.Pow(x, power) for x in amgm_expr(new_expr, label)]
+            elif power.is_negative:
+                return [sp.Pow(x, power) for x in amgm_expr(new_expr, -label)]
+            return []
+
+
+        rtn = []
+        prod = sp.fraction(expr)
+        if prod[1] != 1:
+            numer = amgm_expr(prod[1], -f(prod[0])*label)
+            rtn += [prod[0] / y for y in numer ]
+            # print(expr, rtn, numer)
+
 
         if t == sp.Mul:
 
@@ -129,25 +134,26 @@ def amgm(expr):
             for i in range(n):
                 term_pos_neg = left_pos_neg[i - 1] * right_pos_neg[i + 1]
                 children_expr[i] = amgm_expr(children[i], term_pos_neg * label)
-            rtn = []
+
             for i in range(n):
                 m = len(children_expr[i])
-                for j in range(m - 1):
+                for j in range(m):
                     new_expr = children_expr[i][j]
                     for k in range(n):
                         if k == i: continue
-                        new_expr *= children_expr[k][-1]
+                        new_expr *= children[k]
                     rtn.append(new_expr)
+            # print(expr,rtn)
             pos_terms = [x for x in expr.args if f(x)==1]
             neg_terms = [x for x in expr.args if f(x)==-1]
-            if expr.is_positive and label == -1:
-                rtn += am_to_from_gm(expr.args, sp.Mul)
-            if expr.is_negative and label == 1:
+            if (expr.is_positive and label == -1) or (expr.is_negative and label==1):
                 rtn += [sp.Mul(*(neg_terms + [x])) for x in am_to_from_gm(pos_terms, sp.Mul)]
+            # if expr.is_negative and label == 1:
+            #     rtn += [sp.Mul(*(neg_terms + [x])) for x in am_to_from_gm(pos_terms, sp.Mul)]
 
-            return rtn + [expr]
+            return list(set(rtn))
 
-        return [expr]
+        return []
 
     t = type(expr)
     label=1
@@ -160,7 +166,7 @@ def amgm(expr):
     rtn_left = [[l,right,t] for l in amgm_expr(left,label)]
     rtn_right = [[left,r,t] for r in amgm_expr(right,-label)]
 
-    return rtn_left + rtn_right
+    return rtn_left + rtn_right + [[left,right,t]]
 
     # terms=expr.args
     # print(am_to_from_gm(terms,type(expr)))
@@ -173,7 +179,8 @@ def amgm(expr):
 
 # Define symbolic variables
 x, y, z, w = sp.symbols('x y z w', positive=True)
-expr = 1-sp.sqrt(2)*z*x - 1/(x+y) < 1/(x+y+1/(x*y))
-
+expr = 1 < 1/(1+1/((x+y)*(z+w)))
+# amgm(expr)
 for x in amgm(expr): print(x)
 
+# print(sp.fraction(-1/(x+y)))
