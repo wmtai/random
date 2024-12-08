@@ -111,8 +111,8 @@ def amgm(expr):
 
         rtn = []
         prod = sp.fraction(expr)
-        if prod[1] != 1:
-            numer = amgm_expr(prod[1], -f(prod[0])*label)
+        if type(prod[1])==sp.Mul and f(prod[0])*label==1:
+            numer = amgm_expr(prod[1], -1)
             rtn += [prod[0] / y for y in numer ]
             # print(expr, rtn, numer)
 
@@ -180,6 +180,7 @@ def amgm(expr):
 # Define symbolic variables
 x, y, z, w = sp.symbols('x y z w', positive=True)
 expr = 1 < 1/(1+1/((x+y)*(z+w)))
+# print(sp.fraction(expr.args[0])[1].args)
 # amgm(expr)
 for x in amgm(expr): print(x)
 
